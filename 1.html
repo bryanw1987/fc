@@ -7,83 +7,109 @@
     <style>
         :root { --bg: #0d1117; --card: #161b22; --primary: #238636; --text: #c9d1d9; --border: #30363d; }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-        #loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        #setup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
-        .form-card { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 15px; }
-        input { width: 100%; height: 48px; padding: 0 15px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
-        button { height: 48px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+        #setup, #signup-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
+        .form-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
+        input { width: 100%; height: 45px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
+        button { height: 45px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
         
-        header { background: var(--card); padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .logout-btn { background: #da3633; height: 30px; padding: 0 12px; font-size: 12px; border: none; border-radius: 4px; color: white; cursor: pointer; }
+        .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
+        .color-box { width: 100%; aspect-ratio: 1/1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
+        .color-box.selected { border-color: white; transform: scale(1.1); }
 
+        header { background: var(--card); padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         #chat-ui { display: none; flex-direction: column; height: 100dvh; }
         #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
-        .msg { background: var(--card); padding: 12px; border-radius: 12px; max-width: 85%; width: fit-content; border: 1px solid var(--border); }
+        .msg { background: var(--card); padding: 10px; border-radius: 12px; max-width: 85%; width: fit-content; border: 1px solid var(--border); }
         .msg.me { align-self: flex-end; background: #21262d; }
-        
-        .sys-msg { align-self: center; color: #00a8ff; font-size: 13px; font-weight: bold; margin: 10px 0; text-align: center; }
+        .sys-msg { align-self: center; color: #00a8ff; font-size: 13px; font-weight: bold; margin: 5px 0; }
         .tag-label { font-size: 0.65rem; font-weight: 800; opacity: 0.8; background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; margin-left: 5px; }
-
-        .input-area { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--border); padding-bottom: max(15px, env(safe-area-inset-bottom)); }
-        #msg-in { flex: 1; }
+        .input-area { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--border); }
         .hidden { display: none !important; }
+        .switch-link { color: #58a6ff; font-size: 14px; text-decoration: underline; cursor: pointer; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">Checking Access...</div>
+    <div id="loading-overlay" class="hidden" style="position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center;">Checking Access...</div>
 
-    <div id="setup" class="hidden">
+    <div id="setup">
         <div class="form-card">
-            <h2>Private Access</h2>
+            <h2>Login</h2>
             <input type="text" id="user-in" placeholder="Username">
             <input type="password" id="pass-in" placeholder="Password">
-            <button id="login-btn" onclick="handleLoginClick()">Join Chat</button>
+            <button onclick="handleLoginClick()">Join Chat</button>
+            <span class="switch-link" onclick="toggleScreens()">Need an account? Sign up</span>
+        </div>
+    </div>
+
+    <div id="signup-ui" class="hidden">
+        <div class="form-card">
+            <h2>Request Access</h2>
+            <input type="text" id="reg-user" placeholder="Choose Username">
+            <input type="password" id="reg-pass" placeholder="Choose Password">
+            <div style="font-size: 12px; color: #8b949e;">Select your message color:</div>
+            <div class="color-grid" id="color-grid"></div>
+            <button onclick="handleSignup()">Submit Request</button>
+            <span class="switch-link" onclick="toggleScreens()">Back to Login</span>
         </div>
     </div>
 
     <div id="chat-ui">
-        <header>
-            <span id="header-user" style="font-weight:bold; font-size: 14px;">Chat</span>
-            <button class="logout-btn" onclick="logout()">Log Out</button>
-        </header>
+        <header><span id="header-user">Chat</span><button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white;">Log Out</button></header>
         <div id="messages"></div>
-        <div class="input-area">
-            <input type="text" id="msg-in" placeholder="Message..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()" style="width: 70px;">Send</button>
-        </div>
+        <div class="input-area"><input type="text" id="msg-in" placeholder="Message..." onkeypress="if(event.key==='Enter') send()"><button onclick="send()" style="width:70px;">Send</button></div>
     </div>
 
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBAbm9Dw4kYuJCoqhUm9p2ytKQ1yttdLRJeLG2tO0AjSmSz8TNOOV23NSWoEhLkX93/exec"; 
-        let myUser = "", myColor = "#238636", myTag = "", refreshInterval;
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBAbm9Dw4kYuJCoqhUm9p2ytKQ1yttdLRJeLG2tO0AjSmSz8TNOOV23NSWoEhLkX93/exec";
+        let myUser = "", myColor = "#238636", myTag = "", refreshInterval, selectedColor = "#238636";
 
-        window.onload = async () => {
-            const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
-            if (u && p) { if (!(await attemptLogin(u, p, true))) showSetup(); } 
-            else showSetup();
+        const colors = ['#238636','#39ff14','#00d4ff','#ff85a2','#ff9100','#f8e71c','#bd10e0','#9013fe','#50e3c2','#ff5733','#c70039','#900c3f','#581845','#1abc9c','#2ecc71','#3498db','#9b59b6','#f1c40f','#e67e22','#e74c3c'];
+
+        window.onload = () => {
+            const grid = document.getElementById('color-grid');
+            colors.forEach(c => {
+                const d = document.createElement('div');
+                d.className = 'color-box'; d.style.backgroundColor = c;
+                d.onclick = () => { 
+                    document.querySelectorAll('.color-box').forEach(b => b.classList.remove('selected'));
+                    d.classList.add('selected'); selectedColor = c;
+                };
+                grid.appendChild(d);
+            });
+            autoLogin();
         };
 
-        function showSetup() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('setup').classList.remove('hidden');
+        async function autoLogin() {
+            const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
+            if (u && p) {
+                document.getElementById('loading-overlay').classList.remove('hidden');
+                const ok = await attemptLogin(u, p, true);
+                if (!ok) { document.getElementById('loading-overlay').classList.add('hidden'); }
+            }
         }
 
-        async function handleLoginClick() {
-            const u = document.getElementById('user-in').value, p = document.getElementById('pass-in').value;
-            if (!await attemptLogin(u, p, false)) alert("Invalid credentials or account banned.");
+        function toggleScreens() {
+            document.getElementById('setup').classList.toggle('hidden');
+            document.getElementById('signup-ui').classList.toggle('hidden');
+        }
+
+        async function handleSignup() {
+            const u = document.getElementById('reg-user').value, p = document.getElementById('reg-pass').value;
+            if (!u || !p) return alert("Fill all fields");
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "signup", username: u, password: p, color: selectedColor}) });
+            alert("Request sent! Ask an admin to approve you.");
+            toggleScreens();
         }
 
         async function attemptLogin(user, pass, isAuto) {
-            const btn = document.getElementById('login-btn');
-            btn.innerText = "Checking..."; btn.disabled = true;
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
                 const data = await res.json();
                 if (data.success) {
-                    if (!isAuto) await sendSystemMsg(`${user} has entered the chat.`);
+                    if (!isAuto) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${user} has entered the chat.`, isSystem: true}) });
                     localStorage.setItem('chat_user', user); localStorage.setItem('chat_pass', pass);
                     myUser = user; myColor = data.color; myTag = data.tag;
                     document.documentElement.style.setProperty('--primary', myColor);
@@ -91,54 +117,45 @@
                     document.getElementById('loading-overlay').classList.add('hidden');
                     document.getElementById('setup').classList.add('hidden');
                     document.getElementById('chat-ui').style.display = 'flex';
-                    refresh();
-                    refreshInterval = setInterval(refresh, 4000);
-                    return true;
-                } else {
-                    if (data.banned) alert("Your account has been banned.");
-                    logout(false); return false;
-                }
-            } catch (e) { btn.disabled = false; return false; }
+                    refreshInterval = setInterval(refresh, 4000); refresh(); return true;
+                } else if (data.banned) { alert("Banned."); logout(false); }
+                return false;
+            } catch(e) { return false; }
         }
 
-        async function logout(shouldNotify = true) {
-            if (shouldNotify && myUser) await sendSystemMsg(`${myUser} has left the chat.`);
+        function handleLoginClick() {
+            const u = document.getElementById('user-in').value, p = document.getElementById('pass-in').value;
+            attemptLogin(u, p, false).then(ok => { if(!ok) alert("Login Failed"); });
+        }
+
+        async function logout(notify = true) {
+            if (notify && myUser) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} has left the chat.`, isSystem: true}) });
             localStorage.clear(); clearInterval(refreshInterval); location.reload();
         }
 
-        async function sendSystemMsg(txt) {
-            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: txt, isSystem: true}) });
-        }
-
         async function send() {
-            const input = document.getElementById('msg-in'), msg = input.value;
-            if (!msg.trim()) return;
-            input.value = "";
-            renderMessage(myUser, msg, true, myColor, myTag);
-            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({username: myUser, message: msg, color: myColor, tag: myTag, isSystem: false}) });
+            const i = document.getElementById('msg-in'), m = i.value; if (!m.trim()) return;
+            i.value = ""; renderMessage(myUser, m, true, myColor, myTag);
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({username: myUser, message: m, color: myColor, tag: myTag, isSystem: false}) });
         }
 
         async function refresh() {
             try {
                 const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
-                const response = await fetch(`${WEB_APP_URL}?action=refresh&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
-                const data = await response.json();
+                const res = await fetch(`${WEB_APP_URL}?action=refresh&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
+                const data = await res.json();
                 if (!data.authSuccess) { logout(false); return; }
-                const box = document.getElementById('messages');
-                box.innerHTML = "";
+                const box = document.getElementById('messages'); box.innerHTML = "";
                 data.messages.forEach(m => renderMessage(m.username, m.message, m.username === myUser, m.color, m.tag));
-            } catch (e) {}
+            } catch(e) {}
         }
 
-        function renderMessage(user, text, isMe, color, tag) {
+        function renderMessage(u, t, me, c, tag) {
             const box = document.getElementById('messages'), div = document.createElement('div');
-            if (user === "SYSTEM") {
-                div.className = "sys-msg"; div.innerText = text;
-            } else {
-                div.className = `msg ${isMe ? 'me' : ''}`;
-                div.style[isMe ? 'borderRight' : 'borderLeft'] = `4px solid ${color}`;
-                const t = tag ? `<span class="tag-label">(${tag.toUpperCase()})</span>` : "";
-                div.innerHTML = `<b style="color:${color}; font-size:12px;">${user}${t}</b><div style="margin-top:4px;">${text}</div>`;
+            if (u === "SYSTEM") { div.className = "sys-msg"; div.innerText = t; } 
+            else {
+                div.className = `msg ${me ? 'me' : ''}`; div.style[me ? 'borderRight' : 'borderLeft'] = `4px solid ${c}`;
+                div.innerHTML = `<b style="color:${c}; font-size:12px;">${u} <span class="tag-label">(${tag.toUpperCase()})</span></b><div style="margin-top:4px;">${t}</div>`;
             }
             box.appendChild(div); box.scrollTop = box.scrollHeight;
         }
