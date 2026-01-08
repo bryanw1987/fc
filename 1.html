@@ -12,7 +12,8 @@
         #setup, #signup-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
         .form-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
         input { width: 100%; height: 45px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
-        button { height: 45px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+        button { height: 45px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.7; }
         
         .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
         .color-box { width: 100%; aspect-ratio: 1/1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
@@ -29,6 +30,7 @@
         .sys-msg { align-self: center; color: #00a8ff; font-size: 13px; font-weight: bold; margin: 5px 0; }
         .tag-label { font-size: 0.65rem; font-weight: 800; opacity: 0.8; background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; margin-left: 5px; }
         
+        /* Input area with Keyboard GIF support */
         .input-area { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--border); align-items: flex-end; }
         #msg-in { 
             flex: 1; min-height: 45px; max-height: 120px; 
@@ -38,6 +40,7 @@
         }
         #msg-in:empty:before { content: "Message or GIF..."; color: #8b949e; }
 
+        /* Overlays */
         #action-overlay { position: fixed; inset: 0; background: rgba(13, 17, 23, 0.95); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
         
@@ -49,10 +52,8 @@
         .hidden { display: none !important; }
         .switch-link { color: #58a6ff; font-size: 14px; text-decoration: underline; cursor: pointer; text-align: center; margin-top: 10px; }
         
-        /* New Header Buttons Style */
         .header-btns { display: flex; align-items: center; gap: 8px; }
         .btn-refresh { background: #30363d; color: white; border: 1px solid var(--border); height: 30px; width: 35px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        .btn-refresh:active { background: #444c56; }
     </style>
 </head>
 <body>
@@ -102,14 +103,14 @@
         <header>
             <span style="font-weight: bold; color: var(--primary);">Family Chat</span>
             <div class="header-btns">
-                <span id="header-user" style="font-size: 11px; opacity: 0.7; margin-right: 5px;"></span>
+                <span id="header-user" style="font-size: 11px; opacity: 0.7;"></span>
                 <button class="btn-refresh" title="Refresh Page" onclick="location.reload()">↻</button>
                 <button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white; font-weight:bold;">Log Out</button>
             </div>
         </header>
         <div id="messages"></div>
         <div class="input-area">
-            <div id="msg-in" contenteditable="true" placeholder="Message or GIF..."></div>
+            <div id="msg-in" contenteditable="true"></div>
             <button onclick="send()" style="width:70px; height:45px;">Send</button>
         </div>
     </div>
@@ -132,12 +133,8 @@
                 grid.appendChild(d);
             });
 
-            const inputField = document.getElementById('msg-in');
-            inputField.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                }
+            document.getElementById('msg-in').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
             });
 
             autoLogin();
@@ -147,17 +144,10 @@
             const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
             if (u && p) {
                 document.getElementById('loading-overlay').classList.remove('hidden');
-                
-                const timeout = setTimeout(() => {
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                }, 10000);
-
+                const timeout = setTimeout(() => { document.getElementById('loading-overlay').classList.add('hidden'); }, 10000);
                 const ok = await attemptLogin(u, p, true);
                 clearTimeout(timeout);
-                
-                if (!ok) {
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                }
+                if (!ok) document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
 
@@ -169,7 +159,7 @@
                     if (!isAuto) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${user} joined.`, isSystem: true}) });
                     localStorage.setItem('chat_user', user); localStorage.setItem('chat_pass', pass);
                     myUser = user; myColor = data.color; myTag = data.tag;
-                    document.getElementById('header-user').innerText = `${myUser}`;
+                    document.getElementById('header-user').innerText = myUser;
                     document.getElementById('loading-overlay').classList.add('hidden');
                     document.getElementById('setup').classList.add('hidden');
                     document.getElementById('chat-ui').style.display = 'flex';
@@ -182,22 +172,16 @@
         async function handleLoginClick() {
             const u = document.getElementById('user-in').value, p = document.getElementById('pass-in').value;
             if (!u || !p) return alert("Enter credentials");
-            
             document.getElementById('action-text').innerText = "Logging in...";
             document.getElementById('action-overlay').style.display = 'flex';
-            
             const ok = await attemptLogin(u, p, false);
             document.getElementById('action-overlay').style.display = 'none';
             if (!ok) alert("Login Failed. Check approval status.");
         }
 
         async function logout(notify = true) {
-            if (notify && myUser) {
-                try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} left.`, isSystem: true}) }); } catch(e){}
-            }
-            localStorage.clear(); 
-            clearInterval(refreshInterval); 
-            location.reload();
+            if (notify && myUser) try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} left.`, isSystem: true}) }); } catch(e){}
+            localStorage.clear(); clearInterval(refreshInterval); location.reload();
         }
 
         function toggleScreens() {
@@ -214,16 +198,10 @@
                 await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "signup", username: u, password: p, color: selectedColor}) });
                 document.getElementById('action-overlay').style.display = 'none';
                 document.getElementById('success-modal').style.display = 'flex';
-            } catch (e) {
-                document.getElementById('action-overlay').style.display = 'none';
-                alert("Error sending request.");
-            }
+            } catch (e) { document.getElementById('action-overlay').style.display = 'none'; alert("Error."); }
         }
 
-        function closeModal() {
-            document.getElementById('success-modal').style.display = 'none';
-            toggleScreens();
-        }
+        function closeModal() { document.getElementById('success-modal').style.display = 'none'; toggleScreens(); }
 
         async function send() {
             const i = document.getElementById('msg-in');
@@ -251,14 +229,24 @@
         function renderMessage(u, t, me, c, tag) {
             const box = document.getElementById('messages'), div = document.createElement('div');
             if (u === "SYSTEM") { 
-                div.className = "sys-msg"; 
-                div.innerText = t; 
+                div.className = "sys-msg"; div.innerText = t; 
             } else {
                 div.className = `msg ${me ? 'me' : ''}`; 
                 div.style[me ? 'borderRight' : 'borderLeft'] = `4px solid ${c}`;
+                
                 const imgRegex = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg|gifv|mp4|mov))/i;
-                const isImg = imgRegex.test(t.trim());
-                let content = isImg ? `<img src="${t.trim()}" onload="document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">` : t;
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                let content = "";
+
+                if (imgRegex.test(t.trim())) {
+                    content = `<img src="${t.trim()}" onload="document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">`;
+                } else if (urlRegex.test(t.trim())) {
+                    content = t.replace(urlRegex, (url) => {
+                        const domain = new URL(url).hostname;
+                        return `<div style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;"><div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px;"><div style="font-size: 20px;">🔗</div><div style="overflow: hidden;"><div style="font-size: 13px; font-weight: bold; color: #58a6ff; overflow: hidden; text-overflow: ellipsis;">${domain}</div><div style="font-size: 11px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis;">${url}</div></div></div></a></div>`;
+                    });
+                } else { content = t; }
+
                 div.innerHTML = `<b style="color:${c}; font-size:12px;">${u} <span class="tag-label">(${tag.toUpperCase()})</span></b><div style="margin-top:4px;">${content}</div>`;
             }
             box.appendChild(div); box.scrollTop = box.scrollHeight;
