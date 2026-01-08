@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Room</title>
+    <style>
+        :root { --bg: #0d1117; --card: #161b22; --primary: #238636; --text: #c9d1d9; --border: #30363d; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+        #loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        #setup { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
+        .form-card { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        input { width: 100%; height: 48px; padding: 0 15px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
+        button { height: 48px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+        
+        header { background: var(--card); padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { background: #da3633; height: 30px; padding: 0 12px; font-size: 12px; border: none; border-radius: 4px; color: white; cursor: pointer; }
+
+        #chat-ui { display: none; flex-direction: column; height: 100dvh; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { background: var(--card); padding: 12px; border-radius: 12px; max-width: 85%; width: fit-content; border: 1px solid var(--border); }
+        .msg.me { align-self: flex-end; background: #21262d; }
+        
+        .sys-msg { align-self: center; color: #00a8ff; font-size: 13px; font-weight: bold; margin: 10px 0; text-align: center; }
+        .tag-label { font-size: 0.65rem; font-weight: 800; opacity: 0.8; background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; margin-left: 5px; }
+
+        .input-area { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--border); padding-bottom: max(15px, env(safe-area-inset-bottom)); }
+        #msg-in { flex: 1; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">Checking Access...</div>
+
+    <div id="setup" class="hidden">
+        <div class="form-card">
+            <h2>Private Access</h2>
+            <input type="text" id="user-in" placeholder="Username">
+            <input type="password" id="pass-in" placeholder="Password">
+            <button id="login-btn" onclick="handleLoginClick()">Join Chat</button>
+        </div>
+    </div>
+
+    <div id="chat-ui">
+        <header>
+            <span id="header-user" style="font-weight:bold; font-size: 14px;">Chat</span>
+            <button class="logout-btn" onclick="logout()">Log Out</button>
+        </header>
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msg-in" placeholder="Message..." onkeypress="if(event.key==='Enter') send()">
+            <button onclick="send()" style="width: 70px;">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBAbm9Dw4kYuJCoqhUm9p2ytKQ1yttdLRJeLG2tO0AjSmSz8TNOOV23NSWoEhLkX93/exec"; 
+        let myUser = "", myColor = "#238636", myTag = "", refreshInterval;
+
+        window.onload = async () => {
+            const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
+            if (u && p) { if (!(await attemptLogin(u, p, true))) showSetup(); } 
+            else showSetup();
+        };
+
+        function showSetup() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+            document.getElementById('setup').classList.remove('hidden');
+        }
+
+        async function handleLoginClick() {
+            const u = document.getElementById('user-in').value, p = document.getElementById('pass-in').value;
+            if (!await attemptLogin(u, p, false)) alert("Invalid credentials or account banned.");
+        }
+
+        async function attemptLogin(user, pass, isAuto) {
+            const btn = document.getElementById('login-btn');
+            btn.innerText = "Checking..."; btn.disabled = true;
+            try {
+                const res = await fetch(`${WEB_APP_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
+                const data = await res.json();
+                if (data.success) {
+                    if (!isAuto) await sendSystemMsg(`${user} has entered the chat.`);
+                    localStorage.setItem('chat_user', user); localStorage.setItem('chat_pass', pass);
+                    myUser = user; myColor = data.color; myTag = data.tag;
+                    document.documentElement.style.setProperty('--primary', myColor);
+                    document.getElementById('header-user').innerText = `${myUser} (${myTag})`;
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    document.getElementById('setup').classList.add('hidden');
+                    document.getElementById('chat-ui').style.display = 'flex';
+                    refresh();
+                    refreshInterval = setInterval(refresh, 4000);
+                    return true;
+                } else {
+                    if (data.banned) alert("Your account has been banned.");
+                    logout(false); return false;
+                }
+            } catch (e) { btn.disabled = false; return false; }
+        }
+
+        async function logout(shouldNotify = true) {
+            if (shouldNotify && myUser) await sendSystemMsg(`${myUser} has left the chat.`);
+            localStorage.clear(); clearInterval(refreshInterval); location.reload();
+        }
+
+        async function sendSystemMsg(txt) {
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: txt, isSystem: true}) });
+        }
+
+        async function send() {
+            const input = document.getElementById('msg-in'), msg = input.value;
+            if (!msg.trim()) return;
+            input.value = "";
+            renderMessage(myUser, msg, true, myColor, myTag);
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({username: myUser, message: msg, color: myColor, tag: myTag, isSystem: false}) });
+        }
+
+        async function refresh() {
+            try {
+                const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
+                const response = await fetch(`${WEB_APP_URL}?action=refresh&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
+                const data = await response.json();
+                if (!data.authSuccess) { logout(false); return; }
+                const box = document.getElementById('messages');
+                box.innerHTML = "";
+                data.messages.forEach(m => renderMessage(m.username, m.message, m.username === myUser, m.color, m.tag));
+            } catch (e) {}
+        }
+
+        function renderMessage(user, text, isMe, color, tag) {
+            const box = document.getElementById('messages'), div = document.createElement('div');
+            if (user === "SYSTEM") {
+                div.className = "sys-msg"; div.innerText = text;
+            } else {
+                div.className = `msg ${isMe ? 'me' : ''}`;
+                div.style[isMe ? 'borderRight' : 'borderLeft'] = `4px solid ${color}`;
+                const t = tag ? `<span class="tag-label">(${tag.toUpperCase()})</span>` : "";
+                div.innerHTML = `<b style="color:${color}; font-size:12px;">${user}${t}</b><div style="margin-top:4px;">${text}</div>`;
+            }
+            box.appendChild(div); box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
