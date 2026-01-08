@@ -48,6 +48,11 @@
         .modal { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); text-align: center; max-width: 350px; width: 100%; }
         .hidden { display: none !important; }
         .switch-link { color: #58a6ff; font-size: 14px; text-decoration: underline; cursor: pointer; text-align: center; margin-top: 10px; }
+        
+        /* New Header Buttons Style */
+        .header-btns { display: flex; align-items: center; gap: 8px; }
+        .btn-refresh { background: #30363d; color: white; border: 1px solid var(--border); height: 30px; width: 35px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .btn-refresh:active { background: #444c56; }
     </style>
 </head>
 <body>
@@ -55,7 +60,7 @@
     <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>
         <div>Checking Access...</div>
-        <button onclick="logout(false)" style="background: transparent; color: #8b949e; border: 1px solid #30363d; height: 35px; font-size: 12px;">Cancel & Reset</button>
+        <button onclick="logout(false)" style="background: transparent; color: #8b949e; border: 1px solid #30363d; height: 35px; font-size: 12px; margin-top: 10px; padding: 0 15px; border-radius: 8px;">Cancel & Reset</button>
     </div>
 
     <div id="action-overlay">
@@ -96,14 +101,15 @@
     <div id="chat-ui">
         <header>
             <span style="font-weight: bold; color: var(--primary);">Family Chat</span>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span id="header-user" style="font-size: 13px; opacity: 0.8;"></span>
-                <button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white;">Log Out</button>
+            <div class="header-btns">
+                <span id="header-user" style="font-size: 11px; opacity: 0.7; margin-right: 5px;"></span>
+                <button class="btn-refresh" title="Refresh Page" onclick="location.reload()">↻</button>
+                <button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white; font-weight:bold;">Log Out</button>
             </div>
         </header>
         <div id="messages"></div>
         <div class="input-area">
-            <div id="msg-in" contenteditable="true"></div>
+            <div id="msg-in" contenteditable="true" placeholder="Message or GIF..."></div>
             <button onclick="send()" style="width:70px; height:45px;">Send</button>
         </div>
     </div>
@@ -142,10 +148,8 @@
             if (u && p) {
                 document.getElementById('loading-overlay').classList.remove('hidden');
                 
-                // Add a timeout: if it takes > 10s, stop and show login
                 const timeout = setTimeout(() => {
                     document.getElementById('loading-overlay').classList.add('hidden');
-                    alert("Auto-login timed out. Please login manually.");
                 }, 10000);
 
                 const ok = await attemptLogin(u, p, true);
@@ -153,7 +157,6 @@
                 
                 if (!ok) {
                     document.getElementById('loading-overlay').classList.add('hidden');
-                    localStorage.clear(); // Clear bad credentials
                 }
             }
         }
@@ -166,7 +169,7 @@
                     if (!isAuto) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${user} joined.`, isSystem: true}) });
                     localStorage.setItem('chat_user', user); localStorage.setItem('chat_pass', pass);
                     myUser = user; myColor = data.color; myTag = data.tag;
-                    document.getElementById('header-user').innerText = `${myUser} (${myTag})`;
+                    document.getElementById('header-user').innerText = `${myUser}`;
                     document.getElementById('loading-overlay').classList.add('hidden');
                     document.getElementById('setup').classList.add('hidden');
                     document.getElementById('chat-ui').style.display = 'flex';
@@ -189,7 +192,9 @@
         }
 
         async function logout(notify = true) {
-            if (notify && myUser) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} left.`, isSystem: true}) });
+            if (notify && myUser) {
+                try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} left.`, isSystem: true}) }); } catch(e){}
+            }
             localStorage.clear(); 
             clearInterval(refreshInterval); 
             location.reload();
