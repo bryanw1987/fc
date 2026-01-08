@@ -9,11 +9,12 @@
         * { box-sizing: border-box; }
         body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-        #setup, #signup-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
+        #setup, #signup-ui, #admin-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
+        #admin-ui { justify-content: flex-start; overflow-y: auto; display: none; padding-top: 20px; }
+        
         .form-card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 350px; display: flex; flex-direction: column; gap: 12px; }
-        input { width: 100%; height: 45px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
+        input, select { width: 100%; height: 45px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; }
         button { height: 45px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
-        button:active { opacity: 0.7; }
         
         .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0; }
         .color-box { width: 100%; aspect-ratio: 1/1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
@@ -30,38 +31,34 @@
         .sys-msg { align-self: center; color: #00a8ff; font-size: 13px; font-weight: bold; margin: 5px 0; }
         .tag-label { font-size: 0.65rem; font-weight: 800; opacity: 0.8; background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; margin-left: 5px; }
         
-        /* Input area with Keyboard GIF support */
         .input-area { padding: 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--border); align-items: flex-end; }
-        #msg-in { 
-            flex: 1; min-height: 45px; max-height: 120px; 
-            padding: 12px; border-radius: 8px; border: 1px solid var(--border); 
-            background: #0d1117; color: white; outline: none; font-size: 16px;
-            overflow-y: auto; white-space: pre-wrap; word-break: break-word;
-        }
-        #msg-in:empty:before { content: "Message or GIF..."; color: #8b949e; }
+        #msg-in { flex: 1; min-height: 45px; max-height: 120px; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0d1117; color: white; outline: none; font-size: 16px; overflow-y: auto; white-space: pre-wrap; }
+        #msg-in:empty:before { content: "Message..."; color: #8b949e; }
 
-        /* Overlays */
+        /* Admin UI styles */
+        .admin-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; width: 100%; max-width: 400px; }
+        .admin-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .admin-actions { display: flex; gap: 5px; }
+        .admin-actions select { height: 32px; font-size: 12px; }
+        .search-container { position: sticky; top: 0; background: var(--bg); padding: 10px 0; width: 100%; max-width: 400px; z-index: 5; }
+
+        /* Spinner & Overlays */
         #action-overlay { position: fixed; inset: 0; background: rgba(13, 17, 23, 0.95); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-        
         .spinner { width: 45px; height: 45px; border: 4px solid #30363d; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1001; padding: 20px; }
-        .modal { background: var(--card); padding: 30px; border-radius: 12px; border: 1px solid var(--border); text-align: center; max-width: 350px; width: 100%; }
         .hidden { display: none !important; }
-        .switch-link { color: #58a6ff; font-size: 14px; text-decoration: underline; cursor: pointer; text-align: center; margin-top: 10px; }
-        
         .header-btns { display: flex; align-items: center; gap: 8px; }
-        .btn-refresh { background: #30363d; color: white; border: 1px solid var(--border); height: 30px; width: 35px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .btn-icon { background: #30363d; color: white; border: 1px solid var(--border); height: 30px; width: 35px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>
-        <div>Checking Access...</div>
-        <button onclick="logout(false)" style="background: transparent; color: #8b949e; border: 1px solid #30363d; height: 35px; font-size: 12px; margin-top: 10px; padding: 0 15px; border-radius: 8px;">Cancel & Reset</button>
+        <div>Connecting to Family Server...</div>
+        <button onclick="logout()" style="background: transparent; color: #8b949e; border: 1px solid #30363d; height: 35px; font-size: 12px; margin-top: 10px; padding: 0 15px; border-radius: 8px;">Cancel & Reset</button>
     </div>
 
     <div id="action-overlay">
@@ -69,21 +66,13 @@
         <div id="action-text">Processing...</div>
     </div>
 
-    <div id="success-modal" class="modal-overlay">
-        <div class="modal">
-            <h2 style="color: var(--primary); margin-top: 0;">Request Sent!</h2>
-            <p>Your request has been submitted. Ask the family admin for approval!</p>
-            <button onclick="closeModal()" style="width: 100%; margin-top: 10px;">Return to Login</button>
-        </div>
-    </div>
-
     <div id="setup">
         <div class="form-card">
-            <h2 style="text-align: center; margin-bottom: 5px;">Family Chat</h2>
+            <h2 style="text-align: center;">Family Chat</h2>
             <input type="text" id="user-in" placeholder="Username">
             <input type="password" id="pass-in" placeholder="Password">
             <button onclick="handleLoginClick()">Join Chat</button>
-            <span class="switch-link" onclick="toggleScreens()">Need an account? Sign up</span>
+            <span style="color:#58a6ff; font-size:14px; cursor:pointer; text-align:center;" onclick="toggleScreens('signup')">Need an account? Sign up</span>
         </div>
     </div>
 
@@ -92,11 +81,20 @@
             <h2>Join the Family</h2>
             <input type="text" id="reg-user" placeholder="Choose Username">
             <input type="password" id="reg-pass" placeholder="Choose Password">
-            <div style="font-size: 12px; color: #8b949e;">Choose your color:</div>
+            <div style="font-size: 12px; color: #8b949e;">Choose your message color:</div>
             <div class="color-grid" id="color-grid"></div>
             <button onclick="handleSignup()">Submit Request</button>
-            <span class="switch-link" onclick="toggleScreens()">Back to Login</span>
+            <span style="color:#58a6ff; font-size:14px; cursor:pointer; text-align:center;" onclick="toggleScreens('login')">Back to Login</span>
         </div>
+    </div>
+
+    <div id="admin-ui" class="hidden">
+        <div class="search-container">
+            <h2>Manage Members</h2>
+            <input type="text" id="admin-search" placeholder="Search by name..." oninput="filterAdminList()">
+            <button onclick="toggleScreens('chat')" style="width:100%; background:#30363d; margin-top:10px; height:35px;">Return to Chat</button>
+        </div>
+        <div id="admin-list" style="width:100%; display:flex; flex-direction:column; align-items:center; padding-bottom:40px;"></div>
     </div>
 
     <div id="chat-ui">
@@ -104,8 +102,9 @@
             <span style="font-weight: bold; color: var(--primary);">Family Chat</span>
             <div class="header-btns">
                 <span id="header-user" style="font-size: 11px; opacity: 0.7;"></span>
-                <button class="btn-refresh" title="Refresh Page" onclick="location.reload()">↻</button>
-                <button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white; font-weight:bold;">Log Out</button>
+                <button id="admin-btn" class="btn-icon hidden" onclick="openAdmin()">⚙️</button>
+                <button class="btn-icon" onclick="location.reload()">↻</button>
+                <button onclick="logout()" style="background:#da3633; height:30px; font-size:12px; padding:0 10px; border-radius:4px; border:none; color:white; font-weight:bold;">Exit</button>
             </div>
         </header>
         <div id="messages"></div>
@@ -116,8 +115,10 @@
     </div>
 
     <script>
+        // REPLACE THIS WITH YOUR DEPLOYED WEB APP URL
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBAbm9Dw4kYuJCoqhUm9p2ytKQ1yttdLRJeLG2tO0AjSmSz8TNOOV23NSWoEhLkX93/exec";
-        let myUser = "", myColor = "#238636", myTag = "", refreshInterval, selectedColor = "#238636";
+        
+        let myUser = "", myColor = "#238636", myTag = "", refreshInterval, selectedColor = "#238636", allUsersCache = [];
 
         const colors = ['#238636','#39ff14','#00d4ff','#ff85a2','#ff9100','#f8e71c','#bd10e0','#9013fe','#50e3c2','#ff5733','#c70039','#900c3f','#581845','#1abc9c','#2ecc71','#3498db','#9b59b6','#f1c40f','#e67e22','#e74c3c'];
 
@@ -144,10 +145,8 @@
             const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
             if (u && p) {
                 document.getElementById('loading-overlay').classList.remove('hidden');
-                const timeout = setTimeout(() => { document.getElementById('loading-overlay').classList.add('hidden'); }, 10000);
                 const ok = await attemptLogin(u, p, true);
-                clearTimeout(timeout);
-                if (!ok) document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
 
@@ -156,60 +155,116 @@
                 const res = await fetch(`${WEB_APP_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
                 const data = await res.json();
                 if (data.success) {
-                    if (!isAuto) await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${user} joined.`, isSystem: true}) });
                     localStorage.setItem('chat_user', user); localStorage.setItem('chat_pass', pass);
                     myUser = user; myColor = data.color; myTag = data.tag;
                     document.getElementById('header-user').innerText = myUser;
-                    document.getElementById('loading-overlay').classList.add('hidden');
+                    if (myTag === "ADMIN") document.getElementById('admin-btn').classList.remove('hidden');
                     document.getElementById('setup').classList.add('hidden');
                     document.getElementById('chat-ui').style.display = 'flex';
                     refreshInterval = setInterval(refresh, 4000); refresh(); return true;
-                } else if (data.banned) { alert("Banned."); logout(false); }
+                }
                 return false;
             } catch(e) { return false; }
         }
 
+        async function openAdmin() {
+            toggleScreens('admin');
+            showSpinner("Loading users...");
+            const res = await fetch(`${WEB_APP_URL}?action=get_users&user=${myUser}&pass=${localStorage.getItem('chat_pass')}`);
+            allUsersCache = await res.json();
+            hideSpinner();
+            renderAdminList(allUsersCache);
+        }
+
+        function renderAdminList(users) {
+            const list = document.getElementById('admin-list');
+            list.innerHTML = "";
+            users.forEach(u => {
+                const item = document.createElement('div');
+                item.className = "admin-item";
+                item.innerHTML = `
+                    <div class="admin-row">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:15px; height:15px; border-radius:3px; background:${u.color}; border:1px solid #fff;"></div>
+                            <b>${u.user}</b>
+                        </div>
+                        <span style="font-size:10px; opacity:0.6;">${u.tag}</span>
+                    </div>
+                    <div class="admin-actions">
+                        <select onchange="updateUserInfo('${u.user}', this.value)">
+                            <option value="">Update Role</option>
+                            <option value="MEMBER">Member</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="BANNED">Ban</option>
+                        </select>
+                        ${u.tag === 'PENDING' ? `<button onclick="adminAction('${u.user}', 'approve')" style="background:#238636; height:32px; font-size:11px; padding:0 8px;">Approve</button>` : ''}
+                        <button onclick="adminAction('${u.user}', 'deny')" style="background:#da3633; height:32px; width:35px;">×</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function filterAdminList() {
+            const query = document.getElementById('admin-search').value.toLowerCase();
+            const filtered = allUsersCache.filter(u => u.user.toLowerCase().includes(query));
+            renderAdminList(filtered);
+        }
+
+        async function updateUserInfo(target, newTag) {
+            if (!newTag) return;
+            showSpinner("Updating...");
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "update_user", user: myUser, pass: localStorage.getItem('chat_pass'), target: target, newTag: newTag}) });
+            hideSpinner();
+            openAdmin();
+        }
+
+        async function adminAction(target, action) {
+            showSpinner("Processing...");
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "admin_manage", user: myUser, pass: localStorage.getItem('chat_pass'), target: target, subAction: action}) });
+            hideSpinner();
+            openAdmin();
+        }
+
         async function handleLoginClick() {
             const u = document.getElementById('user-in').value, p = document.getElementById('pass-in').value;
-            if (!u || !p) return alert("Enter credentials");
-            document.getElementById('action-text').innerText = "Logging in...";
-            document.getElementById('action-overlay').style.display = 'flex';
+            if (!u || !p) return alert("Please enter credentials");
+            showSpinner("Logging in...");
             const ok = await attemptLogin(u, p, false);
-            document.getElementById('action-overlay').style.display = 'none';
-            if (!ok) alert("Login Failed. Check approval status.");
-        }
-
-        async function logout(notify = true) {
-            if (notify && myUser) try { await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({message: `${myUser} left.`, isSystem: true}) }); } catch(e){}
-            localStorage.clear(); clearInterval(refreshInterval); location.reload();
-        }
-
-        function toggleScreens() {
-            document.getElementById('setup').classList.toggle('hidden');
-            document.getElementById('signup-ui').classList.toggle('hidden');
+            hideSpinner();
+            if (!ok) alert("Login Failed. Credentials incorrect or approval pending.");
         }
 
         async function handleSignup() {
             const u = document.getElementById('reg-user').value, p = document.getElementById('reg-pass').value;
             if (!u || !p) return alert("Fill all fields");
-            document.getElementById('action-text').innerText = "Submitting...";
-            document.getElementById('action-overlay').style.display = 'flex';
-            try {
-                await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "signup", username: u, password: p, color: selectedColor}) });
-                document.getElementById('action-overlay').style.display = 'none';
-                document.getElementById('success-modal').style.display = 'flex';
-            } catch (e) { document.getElementById('action-overlay').style.display = 'none'; alert("Error."); }
+            showSpinner("Submitting Request...");
+            await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({action: "signup", username: u, password: p, color: selectedColor}) });
+            hideSpinner();
+            alert("Request sent! Ask the family admin to approve you.");
+            toggleScreens('login');
         }
 
-        function closeModal() { document.getElementById('success-modal').style.display = 'none'; toggleScreens(); }
+        function toggleScreens(scr) {
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('signup-ui').classList.add('hidden');
+            document.getElementById('admin-ui').classList.add('hidden');
+            document.getElementById('chat-ui').style.display = 'none';
+            if (scr === 'login') document.getElementById('setup').classList.remove('hidden');
+            if (scr === 'signup') document.getElementById('signup-ui').classList.remove('hidden');
+            if (scr === 'admin') document.getElementById('admin-ui').classList.remove('hidden');
+            if (scr === 'chat') document.getElementById('chat-ui').style.display = 'flex';
+        }
+
+        function showSpinner(t) { document.getElementById('action-text').innerText = t; document.getElementById('action-overlay').style.display = 'flex'; }
+        function hideSpinner() { document.getElementById('action-overlay').style.display = 'none'; }
+
+        async function logout() { localStorage.clear(); location.reload(); }
 
         async function send() {
-            const i = document.getElementById('msg-in');
-            let m = i.innerText;
-            const pastedImg = i.querySelector('img');
-            if (pastedImg) m = pastedImg.src;
-
-            if (!m.trim()) return;
+            const i = document.getElementById('msg-in'); let m = i.innerText;
+            const pImg = i.querySelector('img'); if (pImg) m = pImg.src;
+            if (!m.trim()) return; 
             i.innerHTML = "";
             renderMessage(myUser, m, true, myColor, myTag);
             await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({username: myUser, message: m, color: myColor, tag: myTag, isSystem: false}) });
@@ -220,34 +275,31 @@
                 const u = localStorage.getItem('chat_user'), p = localStorage.getItem('chat_pass');
                 const res = await fetch(`${WEB_APP_URL}?action=refresh&user=${encodeURIComponent(u)}&pass=${encodeURIComponent(p)}`);
                 const data = await res.json();
-                if (!data.authSuccess) { logout(false); return; }
-                const box = document.getElementById('messages'); box.innerHTML = "";
+                if (!data.authSuccess) return logout();
+                const box = document.getElementById('messages');
+                box.innerHTML = "";
                 data.messages.forEach(m => renderMessage(m.username, m.message, m.username === myUser, m.color, m.tag));
             } catch(e) {}
         }
 
         function renderMessage(u, t, me, c, tag) {
             const box = document.getElementById('messages'), div = document.createElement('div');
-            if (u === "SYSTEM") { 
-                div.className = "sys-msg"; div.innerText = t; 
-            } else {
-                div.className = `msg ${me ? 'me' : ''}`; 
-                div.style[me ? 'borderRight' : 'borderLeft'] = `4px solid ${c}`;
-                
-                const imgRegex = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg|gifv|mp4|mov))/i;
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
-                let content = "";
+            if (u === "SYSTEM") { div.className = "sys-msg"; div.innerText = t; } 
+            else {
+                div.className = `msg ${me ? 'me' : ''}`; div.style[me ? 'borderRight' : 'borderLeft'] = `4px solid ${c}`;
+                const imgR = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg|gifv))/i;
+                const urlR = /(https?:\/\/[^\s]+)/g;
+                let content = t;
 
-                if (imgRegex.test(t.trim())) {
+                if (imgR.test(t.trim())) {
                     content = `<img src="${t.trim()}" onload="document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;">`;
-                } else if (urlRegex.test(t.trim())) {
-                    content = t.replace(urlRegex, (url) => {
-                        const domain = new URL(url).hostname;
-                        return `<div style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;"><div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px;"><div style="font-size: 20px;">🔗</div><div style="overflow: hidden;"><div style="font-size: 13px; font-weight: bold; color: #58a6ff; overflow: hidden; text-overflow: ellipsis;">${domain}</div><div style="font-size: 11px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis;">${url}</div></div></div></a></div>`;
+                } else if (urlR.test(t.trim())) {
+                    content = t.replace(urlR, (url) => {
+                        const dom = new URL(url).hostname;
+                        return `<div style="margin-top:8px;"><a href="${url}" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;"><div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 10px;"><div>🔗</div><div><div style="font-size: 13px; font-weight: bold; color: #58a6ff;">${dom}</div><div style="font-size: 11px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis;">${url}</div></div></div></a></div>`;
                     });
-                } else { content = t; }
-
-                div.innerHTML = `<b style="color:${c}; font-size:12px;">${u} <span class="tag-label">(${tag.toUpperCase()})</span></b><div style="margin-top:4px;">${content}</div>`;
+                }
+                div.innerHTML = `<b style="color:${c}; font-size:12px;">${u} <span class="tag-label">(${tag})</span></b><div style="margin-top:4px;">${content}</div>`;
             }
             box.appendChild(div); box.scrollTop = box.scrollHeight;
         }
